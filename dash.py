@@ -8,8 +8,6 @@ from time import sleep
 
 st.set_page_config('ESTOQUE • FILA', page_icon='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png', layout='wide')
 st.logo('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.png', icon_image='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png')
-# st.image('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.png', width=200)
-# st.divider()
 
 st.sidebar.title('MÓDULOS')
 st.sidebar.page_link('dash.py', label="DASHBOARD", disabled=True)
