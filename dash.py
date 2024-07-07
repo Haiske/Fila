@@ -10,7 +10,9 @@ from workalendar.america import Brazil
 from time import sleep
 
 st.set_page_config('ESTOQUE • FILA', page_icon='https://i.imgur.com/TZp66zI.png', layout='wide')
-    
+
+st.logo('https://i.imgur.com/QgNqMAu.png', icon_image='https://i.imgur.com/TZp66zI.png')
+
 st.image('https://i.imgur.com/QgNqMAu.png', width=400)
 st.header('', divider='gray')
 
