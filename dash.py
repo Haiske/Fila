@@ -15,8 +15,6 @@ st.image('https://seeklogo.com/images/G/gertec-logo-D1C911377C-seeklogo.com.png?
 st.header('', divider='gray')
 
 st.sidebar.title('MÓDULOS')
-if st.session_state['connection'] == 'editor':
-    st.sidebar.page_link('pages/4_Movimentações.py', label='MOVIMENTAÇÕES')
 st.sidebar.page_link('pages/1_Contratos.py', label='CONTRATO')
 st.sidebar.page_link('pages/2_Varejo.py', label='VAREJO')
 st.sidebar.page_link('pages/3_OS Interna.py', label='OS INTERNA')
