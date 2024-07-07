@@ -24,6 +24,8 @@ def create_df_historico_movimentações():
     # a data em que o equipamento foi enviado ao laboratório (já que queremos monitorar apenas o fila aqui) ou a data 01/07/2024.
 
     calendario = Brazil()
+
+    st.write(historico_fila.info())
     
     historico_fila['ULTIMA DATA'] = historico_fila['DT ENVIO LAB']
     historico_fila.loc[historico_fila['ULTIMA DATA'].isna(), 'ULTIMA DATA'] = date(2024, 7, 1)
