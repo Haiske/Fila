@@ -15,6 +15,3 @@ st.image('https://seeklogo.com/images/G/gertec-logo-D1C911377C-seeklogo.com.png?
 st.header('', divider='gray')
 
 st.sidebar.title('MÓDULOS')
-st.sidebar.page_link('pages/1_Contratos.py', label='CONTRATO')
-st.sidebar.page_link('pages/2_Varejo.py', label='VAREJO')
-st.sidebar.page_link('pages/3_OS Interna.py', label='OS INTERNA')
