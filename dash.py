@@ -9,7 +9,7 @@ import plotly.express as px
 from workalendar.america import Brazil
 from time import sleep
 
-st.set_page_config('ESTOQUE • FILA', page_icon='https://imgur.com/TZp66zI', layout='wide')
+st.set_page_config('ESTOQUE • FILA', page_icon='https://i.imgur.com/TZp66zI.png', layout='wide')
     
 st.image('https://seeklogo.com/images/G/gertec-logo-D1C911377C-seeklogo.com.png?v=637843433630000000', width=200)
 st.header('', divider='gray')
