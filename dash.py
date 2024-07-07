@@ -9,11 +9,11 @@ import plotly.express as px
 from workalendar.america import Brazil
 from time import sleep
 
-st.set_page_config('ESTOQUE • FILA', page_icon='https://i.imgur.com/TZp66zI.png', layout='wide')
+st.set_page_config('ESTOQUE • FILA', page_icon='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png', layout='wide')
 
-st.logo('https://i.imgur.com/QgNqMAu.png', icon_image='https://i.imgur.com/TZp66zI.png')
+st.logo('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.png', icon_image='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png')
 
-st.image('/attachments/logo.png', width=400)
+st.image('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.png', width=400)
 st.divider()
 
 st.sidebar.title('MÓDULOS')
