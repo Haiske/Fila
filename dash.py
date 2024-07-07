@@ -17,15 +17,14 @@ st.sidebar.page_link('pages/tabelas.py', label="TABELAS")
 def create_df_historico_movimentações():
     historico_fila = pd.read_csv('https://raw.githubusercontent.com/Haiske/Fila/main/tables/historico.csv', converters={'CAIXA':str,
                                                                                                        'SERIAL':str,
-                                                                                                       'ORDEM DE SERVIÇO':str})
+                                                                                                       'ORDEM DE SERVIÇO':str
+                                                                                                       'DT RECEBIMENTO':pd.to_datetime})
 
     # Como preciso deixar meu dashboard de uma forma estática para a data 01/07/2024 (data de criação da minha base de dados),
     # criei a coluna 'ULTIMA DATA' para que no cálculo da % atingida do prazo do SLA (Service Level Agreements) seja sempre considerada
     # a data em que o equipamento foi enviado ao laboratório (já que queremos monitorar apenas o fila aqui) ou a data 01/07/2024.
 
     calendario = Brazil()
-
-    st.write(historico_fila.info())
     
     historico_fila['ULTIMA DATA'] = historico_fila['DT ENVIO LAB']
     historico_fila.loc[historico_fila['ULTIMA DATA'].isna(), 'ULTIMA DATA'] = date(2024, 7, 1)
