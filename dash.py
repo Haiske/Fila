@@ -17,3 +17,5 @@ st.image('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.pn
 st.divider()
 
 st.sidebar.title('MÓDULOS')
+st.sidebar.page_link('dash.py', label="DASHBOARD", disabled=True)
+st.sidebar.page_link('pages/tabelas.py', label="TABELAS")
