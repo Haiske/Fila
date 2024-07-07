@@ -13,11 +13,6 @@ st.sidebar.title('MÓDULOS')
 st.sidebar.page_link('dash.py', label="DASHBOARD", disabled=True)
 st.sidebar.page_link('pages/tabelas.py', label="TABELAS")
 
-df = pd.read_csv('https://raw.githubusercontent.com/Haiske/Fila/main/tables/historico.csv', converters={'CAIXA':str,
-                                                                                                       'SERIAL':str,
-                                                                                                       'ORDEM DE SERVIÇO':str})
-st.dataframe(df)
-
 
 def create_df_historico_movimentações():
     # Saldo geral
