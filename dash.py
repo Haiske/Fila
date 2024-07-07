@@ -17,7 +17,7 @@ st.sidebar.page_link('pages/tabelas.py', label="TABELAS")
 def create_df_historico_movimentações():
     historico_fila = pd.read_csv('https://raw.githubusercontent.com/Haiske/Fila/main/tables/historico.csv', converters={'CAIXA':str,
                                                                                                        'SERIAL':str,
-                                                                                                       'ORDEM DE SERVIÇO':str
+                                                                                                       'ORDEM DE SERVIÇO':str,
                                                                                                        'DT RECEBIMENTO':pd.to_datetime})
 
     # Como preciso deixar meu dashboard de uma forma estática para a data 01/07/2024 (data de criação da minha base de dados),
