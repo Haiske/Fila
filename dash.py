@@ -28,6 +28,7 @@ def create_df_historico_movimentações():
     historico_fila['ULTIMA DATA'] = historico_fila['DT ENVIO LAB']
     historico_fila.loc[historico_fila['ULTIMA DATA'].isna(), 'ULTIMA DATA'] = date(2024, 7, 1)
     historico_fila['ULTIMA DATA'] = pd.to_datetime(historico_fila['ULTIMA DATA'])
+    historico_fila['DT RECEBIMENTO'] = pd.to_datetime(historico_fila['DT RECEBIMENTO'])
     historico_fila['AGING TOTAL'] = historico_fila.apply(lambda row: calendario.get_working_days_delta(row['DT RECEBIMENTO'], row['ULTIMA DATA']), axis=1) + 1
     historico_fila['AGING TOTAL'] = historico_fila['AGING TOTAL'].astype('int')
     
