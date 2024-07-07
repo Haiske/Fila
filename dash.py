@@ -15,14 +15,16 @@ st.sidebar.page_link('pages/tabelas.py', label="TABELAS")
 
 
 def create_df_historico_movimentações():
-    # Saldo geral
     historico_fila = pd.read_csv('https://raw.githubusercontent.com/Haiske/Fila/main/tables/historico.csv', converters={'CAIXA':str,
                                                                                                        'SERIAL':str,
                                                                                                        'ORDEM DE SERVIÇO':str})
 
-    """Como preciso deixar meu dashboard de uma forma estática para a data 01/07/2024 (data de criação da minha base de dados),
-    criei a coluna 'ULTIMA DATA' para que no cálculo da % atingida do prazo do SLA (Service Level Agreements) seja sempre considerada
-    a data em que o equipamento foi enviado ao laboratório (já que queremos monitorar apenas o fila aqui) ou a data 01/07/2024."""
+    # Como preciso deixar meu dashboard de uma forma estática para a data 01/07/2024 (data de criação da minha base de dados),
+    # criei a coluna 'ULTIMA DATA' para que no cálculo da % atingida do prazo do SLA (Service Level Agreements) seja sempre considerada
+    # a data em que o equipamento foi enviado ao laboratório (já que queremos monitorar apenas o fila aqui) ou a data 01/07/2024.
+
+    calendario = Brazil()
+    
     historico_fila['ULTIMA DATA'] = historico_fila['DT ENVIO LAB']
     historico_fila.loc[historico_fila['ULTIMA DATA'].isna(), 'ULTIMA DATA'] = date(2024, 7, 1)
     historico_fila['AGING TOTAL'] = historico_fila.apply(lambda row: calendario.get_working_days_delta(row['DT RECEBIMENTO'], row['ULTIMA DATA']), axis=1) + 1
@@ -31,13 +33,13 @@ def create_df_historico_movimentações():
     historico_fila['% DO SLA'] = historico_fila['AGING TOTAL']/15
     historico_fila['STATUS'] = None
 
-    """Classificamos o nível de criticidade dos equipamentos dentro do fila de acordo com a % do SLA. Sendo assim:
-    Até 10%: Rápido
-    Até 30%: Médio
-    Até 50%: Lento
-    Até 100%: Crítico
-    Acima de 100%: SLA Estourado
-    """
+    # Classificamos o nível de criticidade dos equipamentos dentro do fila de acordo com a % do SLA. Sendo assim:
+    # Até 10%: Rápido
+    # Até 30%: Médio
+    # Até 50%: Lento
+    # Até 100%: Crítico
+    # Acima de 100%: SLA Estourado
+    
     historico_fila.loc[(historico_fila['% DO SLA'] > 0.0) & (historico_fila['% DO SLA'] <= 0.1), 'STATUS'] = "RÁPIDO"
     historico_fila.loc[(historico_fila['% DO SLA'] > 0.1) & (historico_fila['% DO SLA'] <= 0.3), 'STATUS'] = "MÉDIO"
     historico_fila.loc[(historico_fila['% DO SLA'] > 0.3) & (historico_fila['% DO SLA'] <= 0.5), 'STATUS'] = "LENTO"
