@@ -5,7 +5,7 @@ import io
 import plotly.express as px
 from workalendar.america import Brazil
 
-st.set_page_config('ESTOQUE • FILA', page_icon='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png', layout='wide')
+st.set_page_config('PROTECH • FILA', page_icon='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png', layout='wide')
 st.logo('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.png', icon_image='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png')
 
 st.sidebar.title('MÓDULOS')
