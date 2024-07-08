@@ -4,7 +4,6 @@ from datetime import datetime, date
 import io
 import plotly.express as px
 from workalendar.america import Brazil
-from time import sleep
 
 st.set_page_config('ESTOQUE • FILA', page_icon='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png', layout='wide')
 st.logo('https://raw.githubusercontent.com/Haiske/Fila/main/attachments/logo.png', icon_image='https://raw.githubusercontent.com/Haiske/Fila/main/attachments/icon.png')
@@ -13,9 +12,14 @@ st.sidebar.title('MÓDULOS')
 st.sidebar.page_link('dash.py', label="DASHBOARD", disabled=True)
 st.sidebar.page_link('pages/tabelas.py', label="TABELAS")
 
+st.sidebar.divider()
+st.sidebar.title('AÇÕES')
 
-def create_df_historico_movimentações():
-    historico_fila = pd.read_csv('https://raw.githubusercontent.com/Haiske/Fila/main/tables/historico.csv', converters={'CAIXA':str,
+tabs_saldo, tabs_liberados, tabs_saidas = st.tabs(['Saldo', 'Liberados', 'Saídas'])
+
+
+def create_df_historico_fila():
+    df = pd.read_csv('https://raw.githubusercontent.com/Haiske/Fila/main/tables/historico.csv', converters={'CAIXA':str,
                                                                                                        'SERIAL':str,
                                                                                                        'ORDEM DE SERVIÇO':str})
 
@@ -25,19 +29,19 @@ def create_df_historico_movimentações():
 
     calendario = Brazil()
     
-    historico_fila['ULTIMA DATA'] = historico_fila['DT ENVIO LAB']
-    historico_fila.loc[historico_fila['ULTIMA DATA'].isna(), 'ULTIMA DATA'] = date(2024, 7, 1)
+    df['ULTIMA DATA'] = df['DT ENVIO LAB']
+    df.loc[df['ENDEREÇO'] == 'FILA', 'ULTIMA DATA'] = date(2024, 7, 1)
+    df.loc[df['ULTIMA DATA'].isna(), 'ULTIMA DATA'] = date(2024, 7, 1)
     
-    historico_fila['ULTIMA DATA'] = pd.to_datetime(historico_fila['ULTIMA DATA'])
-    historico_fila['DT RECEBIMENTO'] = pd.to_datetime(historico_fila['DT RECEBIMENTO'])
-    historico_fila.loc[~historico_fila['DT RECEBIMENTO'].isna(), 'DT RECEBIMENTO'] = pd.to_datetime(historico_fila.loc[~historico_fila['DT RECEBIMENTO'].isna(), 'DT RECEBIMENTO'])
-
+    df['ULTIMA DATA'] = pd.to_datetime(df['ULTIMA DATA'])
+    df['DT RECEBIMENTO'] = pd.to_datetime(df['DT RECEBIMENTO'])
+    df.loc[~df['DT ENVIO LAB'].isna(), 'DT ENVIO LAB'] = pd.to_datetime(df.loc[~df['DT ENVIO LAB'].isna(), 'DT ENVIO LAB'])
     
-    historico_fila['AGING TOTAL'] = historico_fila.apply(lambda row: calendario.get_working_days_delta(row['DT RECEBIMENTO'], row['ULTIMA DATA']), axis=1) + 1
-    historico_fila['AGING TOTAL'] = historico_fila['AGING TOTAL'].astype('int')
+    df['AGING TOTAL'] = df.apply(lambda row: calendario.get_working_days_delta(row['DT RECEBIMENTO'], row['ULTIMA DATA']), axis=1) + 1
+    df['AGING TOTAL'] = df['AGING TOTAL'].astype('int')
     
-    historico_fila['% DO SLA'] = historico_fila['AGING TOTAL']/15
-    historico_fila['STATUS'] = None
+    df['% DO SLA'] = df['AGING TOTAL']/30
+    df['STATUS'] = None
 
     # Classificamos o nível de criticidade dos equipamentos dentro do fila de acordo com a % do SLA. Sendo assim:
     # Até 10%: Rápido
@@ -46,116 +50,257 @@ def create_df_historico_movimentações():
     # Até 100%: Crítico
     # Acima de 100%: SLA Estourado
     
-    historico_fila.loc[(historico_fila['% DO SLA'] > 0.0) & (historico_fila['% DO SLA'] <= 0.1), 'STATUS'] = "RÁPIDO"
-    historico_fila.loc[(historico_fila['% DO SLA'] > 0.1) & (historico_fila['% DO SLA'] <= 0.3), 'STATUS'] = "MÉDIO"
-    historico_fila.loc[(historico_fila['% DO SLA'] > 0.3) & (historico_fila['% DO SLA'] <= 0.5), 'STATUS'] = "LENTO"
-    historico_fila.loc[(historico_fila['% DO SLA'] > 0.5) & (historico_fila['% DO SLA'] <= 1.0), 'STATUS'] = "CRÍTICO"
-    historico_fila.loc[(historico_fila['% DO SLA'] > 1.0), 'STATUS'] = "SLA ESTOURADO"
+    df.loc[(df['% DO SLA'] > 0.0) & (df['% DO SLA'] <= 0.1), 'STATUS'] = "RÁPIDO"
+    df.loc[(df['% DO SLA'] > 0.1) & (df['% DO SLA'] <= 0.3), 'STATUS'] = "MÉDIO"
+    df.loc[(df['% DO SLA'] > 0.3) & (df['% DO SLA'] <= 0.5), 'STATUS'] = "LENTO"
+    df.loc[(df['% DO SLA'] > 0.5) & (df['% DO SLA'] <= 1.0), 'STATUS'] = "CRÍTICO"
+    df.loc[(df['% DO SLA'] > 1.0), 'STATUS'] = "SLA ESTOURADO"
 
-    return historico_fila
-
-
-# def create_df_saldo_contratos(df):
-#     df_saldo_atual_contratos = df
-#     df_saldo_atual_contratos = df_saldo_atual_contratos[(df_saldo_atual_contratos['FLUXO'] == 'CONTRATO') & (df_saldo_atual_contratos['ENDEREÇO'] != 'LAB')]
-
-#     return df_saldo_atual_contratos
+    return df
 
 
-# def create_df_saldo_contratos_resumido(df):
+def create_df_resumido(df, endereço='FILA'):
 
-#     abertura_os = df_sharep(abertura_os_url, 'excel', 'BASE', sharepoint_os_url)
-#     abertura_os = abertura_os[abertura_os['ABRIR O.S'] != "0"]
-#     abertura_os.reset_index(drop=True, inplace=True)
-#     abertura_os.loc[abertura_os['CLIENTE GERFLOOR'].isna(), 'CLIENTE GERFLOOR'] = abertura_os.loc[abertura_os['CLIENTE GERFLOOR'].isna(), 'CLIENTES'].apply(lambda x: x.split(" - ", maxsplit=1)[0])
-#     abertura_os.loc[abertura_os['EQUIPAMENTO GERFLOOR'].isna(), 'EQUIPAMENTO GERFLOOR'] = abertura_os.loc[abertura_os['EQUIPAMENTO GERFLOOR'].isna(), 'CLIENTES'].apply(lambda x: x.split(" - ", maxsplit=1)[1])
-#     abertura_os = abertura_os.rename(columns={'CLIENTE GERFLOOR':'CLIENTE',
-#                                 'EQUIPAMENTO GERFLOOR':'EQUIPAMENTO'}).set_index(['CLIENTE', 'EQUIPAMENTO']).drop(['PENDÊNCIA', 'O.S ABERTA', 'CLIENTES'], axis=1)
+    # Criamos um dataframe resumo que mostra a quantidade de equipamentos no endereço que definimos.
+    # Neste exemplo trabalhamos apenas com "FILA" e "LAB", mas podemos facilmente adaptar isso para mais
+    # tipos de endereços.
 
-#     df.loc[df['CLIENTE'].str.startswith('COBRA'), 'CLIENTE'] = 'COBRA'
-#     df.loc[df['CLIENTE'].str.startswith('BB'), 'CLIENTE'] = 'COBRA'
+    n_df = df[df['ENDEREÇO'] == endereço].copy()
+    n_df = n_df.groupby(['CLIENTE', 'EQUIPAMENTO'])[['SERIAL']].count().reset_index()
+    n_df.rename(columns={'SERIAL':'QUANTIDADE'}, inplace=True)
 
-#     df_saldo_atual_contratos_resumido = df.groupby(['CLIENTE', 'EQUIPAMENTO'])[['SERIAL']].count().reset_index()
+    try:
+        n_df.sort_values(['CLIENTE', 'EQUIPAMENTO'], inplace=True)
+    except:
+        pass
+
+    return n_df
+
+
+def create_df_historico_filtrado(df, points_critico, points_status, endereço='FILA'):
+
+    # Geramos um novo dataframe que será filtrado de acordo com as linhas selecionadas
+    # no nosso dataframe resumido.
+
+    df_selecao = df.copy()
+
+    critic_points = list(i['y'][1:7] for i in points_critico)
+    status_points = list(i['y'][1:7] for i in points_status)
+
+    if len(df_selecao) > 0:
+        df_selecao['CONCATENADO'] = df_selecao['CLIENTE'] + df_selecao['EQUIPAMENTO']
+
+        df_detalhado = st.session_state['historico_fila_contratos'].copy()
+        df_detalhado = df_detalhado[df_detalhado['ENDEREÇO'] == endereço]
+        df_detalhado['CONCATENADO'] = df_detalhado['CLIENTE'] + df_detalhado['EQUIPAMENTO']
+
+        df_detalhado = df_detalhado[df_detalhado['CONCATENADO'].isin(list(df_selecao['CONCATENADO']))]
+    else:
+        df_detalhado = st.session_state['historico_fila_contratos']
+        df_detalhado = df_detalhado[df_detalhado['ENDEREÇO'] == endereço]
+
+    if len(critic_points) > 0:
+        df_detalhado = df_detalhado[df_detalhado['CAIXA'].isin(critic_points)]
+        
+    if len(status_points) > 0:
+        df_detalhado = df_detalhado[df_detalhado['STATUS'].isin(status_points)]
+
+    return df_detalhado
+
+
+def create_fig_criticos(df, points_status):
+
+    # Criamos um gráfico de barras horizontais que rankeia as caixas de acordo
+    # com a % do SLA, levando em consideração apenas a maior dentro de cada caixa.
+
+    df_selecao = df.copy()
+
+    status_points = list(i['y'][1:7] for i in points_status)
+
+    if len(df_selecao) > 0:
+        df_selecao['CONCATENADO'] = df_selecao['CLIENTE'] + df_selecao['EQUIPAMENTO']
+
+        df_detalhado = st.session_state['historico_fila_contratos'].copy()
+        df_detalhado['CONCATENADO'] = df_detalhado['CLIENTE'] + df_detalhado['EQUIPAMENTO']
+
+        df_detalhado = df_detalhado[df_detalhado['CONCATENADO'].isin(list(df_selecao['CONCATENADO']))]
     
-#     df_saldo_atual_contratos_resumido = df_saldo_atual_contratos_resumido.join(abertura_os, on=['CLIENTE', 'EQUIPAMENTO'], how='outer')
-#     df_saldo_atual_contratos_resumido.loc[df_saldo_atual_contratos_resumido['SERIAL'].isna(), 'SERIAL'] = 0
-#     df_saldo_atual_contratos_resumido.SERIAL = df_saldo_atual_contratos_resumido.SERIAL.astype(int)
-#     df_saldo_atual_contratos_resumido.loc[df_saldo_atual_contratos_resumido['ABRIR O.S'].isna(), 'ABRIR O.S'] = 0
-#     df_saldo_atual_contratos_resumido['ABRIR O.S'] = df_saldo_atual_contratos_resumido['ABRIR O.S'].astype(int)
-#     df_saldo_atual_contratos_resumido.rename(columns={'SERIAL':'QTD FILA',
-#                                                       'ABRIR O.S':'QTD OS'}, inplace=True)
-#     df_saldo_atual_contratos_resumido = df_saldo_atual_contratos_resumido[['CLIENTE', 'EQUIPAMENTO', 'QTD OS', 'QTD FILA']]
-#     try:
-#         df_saldo_atual_contratos_resumido.sort_values(['CLIENTE', 'EQUIPAMENTO'], inplace=True)
-#     except:
-#         pass
+    else:
+        df_detalhado = st.session_state['historico_fila_contratos'].copy()
 
-#     return df_saldo_atual_contratos_resumido
+    if len(status_points) > 0:
+        df_detalhado = df_detalhado[df_detalhado['STATUS'].isin(status_points)]
 
+    n_df = df_detalhado[df_detalhado['ENDEREÇO'] == 'FILA'].copy()
+    n_df['CAIXA'] = n_df['CAIXA'].astype('str')
+    n_df['CAIXA'] = "ㅤ" + n_df['CAIXA']
+    n_df['RÓTULO'] = n_df['CLIENTE'] + ' - ' + n_df['ENDEREÇO']
+    n_df = n_df.groupby(['CAIXA', 'RÓTULO'])['% DO SLA'].max().reset_index()
+    n_df = n_df.sort_values('% DO SLA').drop_duplicates(['CAIXA'], keep='last')
+    n_df = n_df.sort_values('% DO SLA').tail(10)
 
-# def create_df_saidas_contratos(df):
-#     df_saldo_atual_contratos = df
-#     df_saldo_atual_contratos = df_saldo_atual_contratos[(df_saldo_atual_contratos['FLUXO'] == 'CONTRATO') & (df_saldo_atual_contratos['ENDEREÇO'] == 'LAB')]
-
-#     return df_saldo_atual_contratos
-
-
-# def create_df_saidas_contratos_resumido(df):
-#     df = df
-#     df.loc[df['CLIENTE'].str.startswith('COBRA'), 'CLIENTE'] = 'COBRA'
-#     df.loc[df['CLIENTE'].str.startswith('BB'), 'CLIENTE'] = 'COBRA'
-
-#     df = df.groupby(['CLIENTE', 'EQUIPAMENTO'])[['SERIAL']].count().reset_index()
-#     df = df.rename(columns={'SERIAL':'QUANTIDADE'})
-#     try:
-#         df = df.sort_values([['CLIENTE', 'EQUIPAMENTO']])
-#     except:
-#         pass
-
-#     return df
-
-
-# def create_fig_criticos():
-#     df = st.session_state['saldo_atual_contratos_selecao'][~st.session_state['saldo_atual_contratos_selecao']['% DO SLA'].isna()].copy()
-#     df['CAIXA'] = df['CAIXA'].astype('str')
-#     df['CAIXA'] = "ㅤ" + df['CAIXA']
-#     df['ENTRADA FILA'] = df['ENTRADA FILA'].astype('str')
-#     df['RÓTULO'] = df['CLIENTE'] + ' - ' + df['ENDEREÇO'] + ' - ' + df['ENTRADA FILA'].str.replace('-','/').str.split(" ").str[0]
-#     df = df.groupby(['CAIXA', 'RÓTULO', '% DO SLA'])['SERIAL'].count().reset_index().sort_values('% DO SLA', ascending=True).tail(10)
+    fig = px.bar(n_df,
+                    x='% DO SLA',
+                    y='CAIXA',
+                    color='% DO SLA',
+                    orientation='h',
+                    text='RÓTULO',
+                    color_continuous_scale=[(0, "#008000"),
+                                            (0.3, "#32CD32"),
+                                            (0.5, "#FFD700"),
+                                            (0.99, "#FF8C00"),
+                                            (1, "#8B0000")],
+                    range_color=[0,1])
     
-#     fig = px.bar(df,
-#                     x='% DO SLA',
-#                     y='CAIXA',
-#                     color='% DO SLA',
-#                     orientation='h',
-#                     text='RÓTULO',
-#                     color_continuous_scale=[(0, "#008000"),
-#                                             (0.2, "#32CD32"),
-#                                             (0.45, "#FFD700"),
-#                                             (0.8, "#FF8C00"),
-#                                             (1, "#8B0000")],
-#                     range_color=[0,1])
+    return fig
+
+
+def create_fig_status(df, endereço='FILA'):
+
+    df_selecao = df.copy()
+
+    if len(df_selecao) > 0:
+        df_selecao['CONCATENADO'] = df_selecao['CLIENTE'] + df_selecao['EQUIPAMENTO']
+
+        df_detalhado = st.session_state['historico_fila_contratos'].copy()
+        df_detalhado = df_detalhado[df_detalhado['ENDEREÇO'] == endereço]
+        df_detalhado['CONCATENADO'] = df_detalhado['CLIENTE'] + df_detalhado['EQUIPAMENTO']
+
+        df_detalhado = df_detalhado[df_detalhado['CONCATENADO'].isin(list(df_selecao['CONCATENADO']))]
     
-#     return fig
+    else:
+        df_detalhado = st.session_state['historico_fila_contratos']
+        df_detalhado = df_detalhado[df_detalhado['ENDEREÇO'] == endereço]
+
+    df_detalhado = df_detalhado.groupby(['STATUS'])[['SERIAL']].count().reset_index()
+
+    fig = px.pie(df_detalhado,
+                                names='STATUS',
+                                values='SERIAL',
+                                color='STATUS',
+                                hole=0.4,
+                                color_discrete_map={'RÁPIDO':'#008000',
+                                                'MÉDIO':'#32CD32',
+                                                'LENTO':'#FFD700',
+                                                'CRÍTICO':'#FF8C00',
+                                                'SLA ESTOURADO':'#8B0000'},
+                            category_orders={'STATUS':['RÁPIDO', 'MÉDIO', 'LENTO', 'CRÍTICO', 'SLA ESTOURADO']})
+    fig.update_traces(textinfo='value+percent')
+
+    return fig
 
 
-# def create_fig_status(df):
-#     df = df.groupby(['STATUS'])[['SERIAL']].count().reset_index()
+def create_fig_volume(df):
+    n_df = df.groupby(['CLIENTE'])['QUANTIDADE'].sum().reset_index().sort_values(['QUANTIDADE'], ascending=False).head(10)
 
-#     fig = px.pie(df,
-#                                 names='STATUS',
-#                                 values='SERIAL',
-#                                 color='STATUS',
-#                                 hole=0.4,
-#                                 color_discrete_map={'RÁPIDO':'#008000',
-#                                                 'MÉDIO':'#32CD32',
-#                                                 'LENTO':'#FFD700',
-#                                                 'CRÍTICO':'#FF8C00',
-#                                                 'SLA ESTOURADO':'#8B0000'},
-#                             category_orders={'STATUS':['RÁPIDO', 'MÉDIO', 'LENTO', 'CRÍTICO', 'SLA ESTOURADO']})
-#     fig.update_traces(textinfo='value+percent')
+    fig = px.bar(n_df,
+                 x='CLIENTE',
+                 y='QUANTIDADE',
+                 color_discrete_sequence=['#13399A'],
+                 orientation='v',
+                 text='QUANTIDADE')
+    
+    fig.update_traces(textposition='inside',
+                      orientation='v')
+  
+    fig.update_layout(yaxis_title=None,
+                      xaxis_title=None,
+                      yaxis_visible=False)
 
-#     return fig
+    return fig
+
+# Salvamos o histórico do fila na memória do navegador.
+if 'historico_fila' not in st.session_state:
+    st.session_state['historico_fila'] = create_df_historico_fila()
+    historico_fila = st.session_state['historico_fila']
+else:
+    historico_fila = st.session_state['historico_fila']
+
+if 'historico_fila_contratos' not in st.session_state:
+    st.session_state['historico_fila_contratos'] = historico_fila[historico_fila['FLUXO'] == 'CONTRATO']
+    historico_contratos = st.session_state['historico_fila_contratos']
+else:
+    historico_contratos = st.session_state['historico_fila_contratos']
+
+
+with tabs_saldo:
+
+    st.title('SALDO DE EQUIPAMENTOS')
+    r0c1, r0c2, r0c3, r0c4 = st.columns(4)
+    st.write('')
+    r1c1, r1c2 = st.columns([0.3, 0.7], gap='large')
+    st.write('')
+    r2c1, r2c2 = st.columns([0.6, 0.4], gap='large')
+    st.write('')
+    r3c1 = st.container()
+
+    df_saldo_resumido = create_df_resumido(historico_contratos)
+
+    r1c1.write('Saldo resumido de equipamentos.')
+    st_saldo_resumido = r1c1.dataframe(df_saldo_resumido,
+                                       use_container_width=True,
+                                       hide_index=True,
+                                       on_select='rerun')
+
+    r2c2.write('Distribuição do status dos equipamentos.')
+    st_status = r2c2.plotly_chart(create_fig_status(df_saldo_resumido.loc[st_saldo_resumido.selection.rows]),
+                                  on_select='rerun',
+                                  use_container_width=True)
+
+    r1c2.write('Caixas rankeadas de acordo com a % do SLA do equipamento mais antigo.')
+    st_criticos = r1c2.plotly_chart(create_fig_criticos(df_saldo_resumido.loc[st_saldo_resumido.selection.rows],
+                                                        points_status=st_status.selection.points),
+                                    on_select='rerun',
+                                    use_container_width=True)
+
+    df_saldo_filtrado = create_df_historico_filtrado(df_saldo_resumido.loc[st_saldo_resumido.selection.rows],
+                                                points_critico=st_criticos.selection.points,
+                                                points_status=st_status.selection.points)[[
+        'ENDEREÇO',
+        'CAIXA',
+        'SERIAL',
+        'CLIENTE',
+        'EQUIPAMENTO',
+        'ORDEM DE SERVIÇO',
+        'GARANTIA',
+        'DT RECEBIMENTO',
+        'STATUS'
+    ]]
+
+    r2c1.write('Saldo detalhado de equipamentos.')
+    r2c1.dataframe(df_saldo_filtrado,
+                   use_container_width=True,
+                   hide_index=True,
+                   column_config={'DT RECEBIMENTO':st.column_config.DateColumn('DT RECEBIMENTO', format='DD/MM/YYYY')})
+    
+    r3c1.write('Ranking dos contratos de acordo com o volume de equipamentos no fila.')
+    if st_saldo_resumido.selection.rows:
+        r3c1 = st.plotly_chart(create_fig_volume(df_saldo_resumido.loc[st_saldo_resumido.selection.rows]))
+        r0c1.metric('Total de equipamentos:', value='{:,}'.format(sum(df_saldo_resumido.loc[st_saldo_resumido.selection.rows, 'QUANTIDADE'])).replace(',','.'))
+    else:
+        r3c1 = st.plotly_chart(create_fig_volume(df_saldo_resumido))
+        r0c1.metric('Total de equipamentos:', value='{:,}'.format(sum(df_saldo_resumido['QUANTIDADE'])).replace(',','.'))
+
+    r0c2.metric('Dentro da garantia:', value='{:,}'.format(len(df_saldo_filtrado[df_saldo_filtrado['GARANTIA'] == 'S'])).replace(',','.'))
+    r0c3.metric('Fora da garantia:', value='{:,}'.format(len(df_saldo_filtrado[df_saldo_filtrado['GARANTIA'] == 'N'])).replace(',','.'))
+    r0c4.metric('Equipamentos com atraso:', value='{:,}'.format(len(df_saldo_filtrado[df_saldo_filtrado['STATUS'].isin(['LENTO', 'CRÍTICO', 'SLA ESTOURADO'])])).replace(',','.'))
+
+
+with tabs_saidas:
+
+    st.title('HISTÓRICO DE SAÍDAS')
+    r0c1, r0c2, r0c3, r0c4 = st.columns(4)
+    st.write('')
+    r1c1, r1c2 = st.columns([0.3, 0.7], gap='large')
+    st.write('')
+    r2c1, r2c2 = st.columns([0.6, 0.4], gap='large')
+    st.write('')
+    r3c1 = st.container()
+
+    df_saldo_resumido = r1c1.dataframe(create_df_resumido(historico_contratos, 'LAB'),
+                                       use_container_width=True,
+                                       hide_index=True,
+                                       on_select='rerun')
 
 
 # def create_fig_status_saidas():
@@ -183,54 +328,6 @@ def create_df_historico_movimentações():
 #     fig.update_traces(textposition='inside',
 #                       orientation='v')
     
-#     fig.update_layout(yaxis_title=None,
-#                       xaxis_title=None,
-#                       yaxis_visible=False)
-    
-#     return fig
-
-
-# def create_fig_volume_fila(rows):
-#     df = df_saldo_atual_contratos_resumido.iloc[rows][['CLIENTE',
-#                                                        'EQUIPAMENTO',
-#                                                        'QTD FILA']].groupby(
-#                                                             ['CLIENTE'])['QTD FILA'].sum(
-#                                                        ).reset_index().sort_values(['QTD FILA'], ascending=False).head(5)
-
-#     fig = px.bar(df,
-#                  x='CLIENTE',
-#                  y='QTD FILA',
-#                  color_discrete_sequence=['#13399A'],
-#                  orientation='v',
-#                  text='QTD FILA')
-    
-#     fig.update_traces(textposition='inside',
-#                       orientation='v')
-  
-#     fig.update_layout(yaxis_title=None,
-#                       xaxis_title=None,
-#                       yaxis_visible=False)
-
-#     return fig
-
-
-# def create_fig_volume_os(rows):
-#     df = df_saldo_atual_contratos_resumido.iloc[rows][['CLIENTE',
-#                                                        'EQUIPAMENTO',
-#                                                        'QTD OS']].groupby(
-#                                                             ['CLIENTE'])['QTD OS'].sum(
-#                                                        ).reset_index().sort_values(['QTD OS'], ascending=False).head(5)
-
-#     fig = px.bar(df,
-#                  x='CLIENTE',
-#                  y='QTD OS',
-#                  color_discrete_sequence=['#E8C406'],
-#                  orientation='v',
-#                  text='QTD OS')
-    
-#     fig.update_traces(textposition='inside',
-#                       orientation='v')
-  
 #     fig.update_layout(yaxis_title=None,
 #                       xaxis_title=None,
 #                       yaxis_visible=False)
@@ -373,178 +470,3 @@ def create_df_historico_movimentações():
 #         st.session_state['df_saldo_atual_contratos_resumido'] = df_scr
 
 #         st.rerun()
-
-
-# if 'historico_fila' not in st.session_state:
-#     st.session_state['historico_fila'] = create_df_historico_movimentações()
-#     historico_fila = st.session_state['historico_fila']
-# else:
-#     historico_fila = st.session_state['historico_fila']
-
-# st.sidebar.header('')
-# st.sidebar.title('AÇÕES')
-
-# tabs_saldo, tabs_saida, tabs_geral = st.tabs(['Saldo', 'Saídas', 'Tabela Geral'])
-
-# tabs_saldo.title('Saldo de Contratos')
-# r0c1, r0c2, r0c3, r0c4 = tabs_saldo.columns(4)
-# tabs_saldo.write('')
-# r1c1, r1c2 = tabs_saldo.columns(2, gap='large')
-# r2c1, r2c2 = tabs_saldo.columns([0.7, 0.3], gap='large')
-# tabs_saldo.write('')
-# r3c1, r3c2 = tabs_saldo.columns(2, gap='large')
-
-# if 'df_saldo_atual_contratos' not in st.session_state or 'df_saldo_atual_contratos_resumido' not in st.session_state:
-#     st.session_state['df_saldo_atual_contratos'] = create_df_saldo_contratos(historico_fila)
-#     st.session_state['df_saldo_atual_contratos_resumido'] = create_df_saldo_contratos_resumido(st.session_state['df_saldo_atual_contratos'])
-
-#     df_saldo_atual_contratos = st.session_state['df_saldo_atual_contratos']
-#     df_saldo_atual_contratos_resumido = st.session_state['df_saldo_atual_contratos_resumido']
-# else:
-#     df_saldo_atual_contratos = st.session_state['df_saldo_atual_contratos']
-#     df_saldo_atual_contratos_resumido = st.session_state['df_saldo_atual_contratos_resumido']
-    
-# st.sidebar.download_button('BAIXAR RESUMO', html_saldo_contrato(), use_container_width=True, file_name='Contratos.html')
-
-# r1c1.write('Resumo de saldo de equipamentos.')
-# saldo_atual_contratos = r1c1.dataframe(
-#     df_saldo_atual_contratos_resumido[['CLIENTE', 'EQUIPAMENTO', 'QTD OS', 'QTD FILA']],
-#     hide_index=True,
-#     use_container_width=True,
-#     on_select='rerun',
-#     column_config={'SERIAL':st.column_config.NumberColumn('QTD FILA')})
-
-# if saldo_atual_contratos.selection.rows:
-#     df_saldo_atual_contratos_resumido['CONCATENADO'] = df_saldo_atual_contratos_resumido['CLIENTE'] + df_saldo_atual_contratos_resumido['EQUIPAMENTO']
-#     df_saldo_atual_contratos['CONCATENADO'] = df_saldo_atual_contratos['CLIENTE'] + df_saldo_atual_contratos['EQUIPAMENTO']
-#     filtro_saldo = list(df_saldo_atual_contratos_resumido.iloc[saldo_atual_contratos.selection.rows]['CONCATENADO'])
-#     saldo_atual_contratos_selecao = df_saldo_atual_contratos[df_saldo_atual_contratos['CONCATENADO'].isin(filtro_saldo)]
-#     st.session_state['saldo_atual_contratos_selecao'] = saldo_atual_contratos_selecao
-#     r0c1.metric('Total de equipamentos (seleção)',
-#                 '{:,}'.format(sum(df_saldo_atual_contratos_resumido.iloc[saldo_atual_contratos.selection.rows]['QTD FILA']) + 
-#                 sum(df_saldo_atual_contratos_resumido.iloc[saldo_atual_contratos.selection.rows]['QTD OS'])).replace(',', '.'))
-#     r0c2.metric('Equipamentos aguardando OS (seleção)',
-#                 '{:,}'.format(sum(df_saldo_atual_contratos_resumido.iloc[saldo_atual_contratos.selection.rows]['QTD OS'])).replace(',', '.'))
-#     r0c3.metric('Equipamentos em fila (seleção)',
-#                 '{:,}'.format(sum(df_saldo_atual_contratos_resumido.iloc[saldo_atual_contratos.selection.rows]['QTD FILA'])).replace(',', '.'))
-# else:
-#     r0c1.metric('Total de equipamentos',
-#                 '{:,}'.format(sum(df_saldo_atual_contratos_resumido['QTD FILA']) +
-#                 sum(df_saldo_atual_contratos_resumido['QTD OS'])).replace(',', '.'))
-#     r0c2.metric('Equipamentos aguardando OS',
-#                 '{:,}'.format(sum(df_saldo_atual_contratos_resumido['QTD OS'])).replace(',', '.'))
-#     r0c3.metric('Equipamentos em fila',
-#                 '{:,}'.format(sum(df_saldo_atual_contratos_resumido['QTD FILA'])).replace(',', '.'))
-    
-# if r0c4.button('FILTROS DE SALDO', use_container_width=True):
-#     open_dialog_filtros_saldo()
-
-
-# if 'saldo_atual_contratos_selecao' in st.session_state and saldo_atual_contratos.selection.rows:
-#     if len(st.session_state['saldo_atual_contratos_selecao']) > 0:
-#         r1c2.write('Classificação dos equipamentos no fila de acordo com % do SLA.')
-#         r1c2.plotly_chart(create_fig_criticos())
-
-#         r2c1.write('Saldo detalhado de equipamentos no fila.')
-#         r2c1.dataframe(saldo_atual_contratos_selecao[[
-#             'ENDEREÇO', 'CAIXA', 'SERIAL', 'CLIENTE',
-#             'EQUIPAMENTO', 'NUM OS', 'ENTRADA GERFLOOR',
-#             'ENTRADA FILA', 'AGING TOTAL', 'AGING FILA',
-#             'STATUS'
-#         ]],
-#                        hide_index=True,
-#                        use_container_width=True,
-#                        column_config={
-#                            'ENTRADA GERFLOOR':st.column_config.DateColumn('ENTRADA GERFLOOR', format="DD/MM/YYYY"),
-#                            'ENTRADA FILA':st.column_config.DateColumn('ENTRADA FILA', format="DD/MM/YYYY HH:mm:ss")
-#                        })
-#         r2c2.write('Status dos equipamentos em relação a entrega do SLA.')
-#         r2c2.plotly_chart(create_fig_status(st.session_state['saldo_atual_contratos_selecao']))
-
-#         r3c2.write('Maiores volumetrias em fila.')
-#         r3c2.plotly_chart(create_fig_volume_fila(saldo_atual_contratos.selection.rows))
-
-#     if sum(df_saldo_atual_contratos_resumido.iloc[saldo_atual_contratos.selection.rows]['QTD OS']) > 0: 
-#         r3c1.write('Maiores volumetrias aguardando abertura de OS.')
-#         r3c1.plotly_chart(create_fig_volume_os(saldo_atual_contratos.selection.rows))
-
-# tabs_saida.title('Saída de Equipamentos')
-# t2r0c1, t2r0c2, t2r0c3, t2r0c4 = tabs_saida.columns(4)
-# tabs_saida.write('')
-# t2r1c1, t2r1c2 = tabs_saida.columns(2, gap='large')
-# t2r2c1 = tabs_saida.container()
-# tabs_saida.write('')
-# t2r3c1 = tabs_saida.container()
-
-# if 'df_saidas_contratos' not in st.session_state or 'df_saidas_contratos_resumido' not in st.session_state:
-#     st.session_state['df_saidas_contratos'] = create_df_saidas_contratos(historico_fila)
-#     st.session_state['df_saidas_contratos_resumido'] = create_df_saidas_contratos_resumido(st.session_state['df_saidas_contratos'])
-
-#     df_saidas_contratos = st.session_state['df_saidas_contratos']
-#     df_saidas_contratos_resumido = st.session_state['df_saidas_contratos_resumido']
-# else:
-#     df_saidas_contratos = st.session_state['df_saidas_contratos']
-#     df_saidas_contratos_resumido = st.session_state['df_saidas_contratos_resumido']
-
-# t2r1c1.write('Resumo de equipamentos enviados ao laboratório.')
-# saidas_contratos = t2r1c1.dataframe(df_saidas_contratos_resumido[['CLIENTE', 'EQUIPAMENTO', 'QUANTIDADE']],
-#                   hide_index=True,
-#                   use_container_width=True,
-#                   on_select='rerun')
-
-# if saidas_contratos.selection.rows:
-#     df_saidas_contratos_resumido['CONCATENADO'] = df_saidas_contratos_resumido['CLIENTE'] + df_saidas_contratos_resumido['EQUIPAMENTO']
-#     df_saidas_contratos['CONCATENADO'] = df_saidas_contratos['CLIENTE'] + df_saidas_contratos['EQUIPAMENTO']
-#     filtro_saldo = list(df_saidas_contratos_resumido.iloc[saidas_contratos.selection.rows]['CONCATENADO'])
-#     saidas_contratos_selecao = df_saidas_contratos[df_saidas_contratos['CONCATENADO'].isin(filtro_saldo)]
-#     st.session_state['saidas_contratos_selecao'] = saidas_contratos_selecao
-
-#     t2r0c1.metric('Total de saídas (seleção)', '{:,}'.format(len(saidas_contratos_selecao['SERIAL'])).replace(',','.'))
-#     if len(saidas_contratos_selecao[saidas_contratos_selecao['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)]) > 0:
-#         filtro_ontem = ((saidas_contratos_selecao['SAÍDA FILA'] >= datetime.today()-timedelta(days=1, hours=datetime.today().hour, minutes=datetime.today().minute)) &
-#                         (saidas_contratos_selecao['SAÍDA FILA'] <= datetime.today()-timedelta(hours=datetime.today().hour+1, minutes=datetime.today().minute)))
-#         try:
-#             t2r0c2.metric('Saídas do dia (seleção)', '{:,}'.format(len(saidas_contratos_selecao[saidas_contratos_selecao['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)])).replace(',','.'),
-#                         delta='{:.2%}'.format(((len(saidas_contratos_selecao[saidas_contratos_selecao['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)])) - len(saidas_contratos_selecao[filtro_ontem])) / len(saidas_contratos_selecao[filtro_ontem])))
-#         except:
-#             t2r0c2.metric('Saídas do dia (seleção)', '{:,}'.format(len(saidas_contratos_selecao[saidas_contratos_selecao['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)])).replace(',','.'),
-#                         delta='{:.2%}'.format(0))
-#     else: t2r0c2.metric('Saídas do dia (seleção)', 0)
-# else:
-#     t2r0c1.metric('Total de saídas', '{:,}'.format(sum(df_saidas_contratos_resumido['QUANTIDADE'])).replace(',','.'))
-#     if len(df_saidas_contratos[df_saidas_contratos['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)]) > 0:
-#         filtro_ontem = ((df_saidas_contratos['SAÍDA FILA'] >= datetime.today()-timedelta(days=1, hours=datetime.today().hour, minutes=datetime.today().minute)) &
-#                         (df_saidas_contratos['SAÍDA FILA'] <= datetime.today()-timedelta(hours=datetime.today().hour, minutes=datetime.today().minute)))
-#         try:
-#             t2r0c2.metric('Saídas do dia', '{:,}'.format(len(df_saidas_contratos[df_saidas_contratos['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)])).replace(',','.'),
-#                         delta='{:.2%}'.format(((len(df_saidas_contratos[df_saidas_contratos['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)])) - len(df_saidas_contratos[filtro_ontem])) / len(df_saidas_contratos[filtro_ontem])))
-#         except:
-#             t2r0c2.metric('Saídas do dia', '{:,}'.format(len(df_saidas_contratos[df_saidas_contratos['SAÍDA FILA'] >= datetime.today()-timedelta(hours=datetime.today().hour+1)])).replace(',','.'),
-#                         delta='{:.2%}'.format(0))
-#     else: t2r0c2.metric('Saídas do dia', 0)
-
-# if t2r0c4.button('FILTROS DE SAÍDA', use_container_width=True):
-#     open_dialog_filtros_saida()
-
-# if 'saidas_contratos_selecao' in st.session_state and saidas_contratos.selection.rows:
-#     t2r1c2.write('Status dos equipamentos entregues em relação ao SLA.')
-#     t2r1c2.plotly_chart(create_fig_status(st.session_state['saidas_contratos_selecao']))
-
-#     t2r2c1.write('Histórico detalhado de equipamentos entregues ao laboratório.')
-#     t2r2c1.dataframe(st.session_state['saidas_contratos_selecao'][['CAIXA', 'SERIAL', 'CLIENTE', 'EQUIPAMENTO',
-#                                                                    'NUM OS', 'ENTRADA GERFLOOR', 'ENTRADA FILA',
-#                                                                    'SAÍDA FILA', 'AGING TOTAL', 'AGING FILA', 'STATUS']].sort_values(['SAÍDA FILA']),
-#                      hide_index=True,
-#                      use_container_width=True,
-#                      column_config={
-#                          'ENTRADA GERFLOOR': st.column_config.DateColumn('ENTRADA GERFLOOR', format='DD/MM/YYYY'),
-#                          'ENTRADA FILA': st.column_config.DateColumn('ENTRADA FILA', format='DD/MM/YYYY HH:mm:ss'),
-#                          'SAÍDA FILA': st.column_config.DateColumn('SAÍDA FILA', format='DD/MM/YYYY HH:mm:ss')
-#                      })
-    
-#     t2r3c1.write('Distribuição do status dos equipamentos entregues ao longo dos meses.')
-#     t2r3c1.plotly_chart(create_fig_status_saidas())
-
-# tabs_geral.dataframe(st.session_state['historico_fila'][st.session_state['historico_fila']['FLUXO'] == 'CONTRATO'])
-
-st.dataframe(create_df_historico_movimentações())
