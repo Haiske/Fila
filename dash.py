@@ -538,6 +538,7 @@ with tabs_liberados:
 
     # Criamos um input onde selecionamos uma data dos equipamentos liberados.
     dt_liberacao = r1c1.date_input(label='Data de liberação:',
+                                   value=date(2024,7,12),
                                    min_value=date(2024, 7, 1),
                                    max_value=date(2024, 7, 14),
                                    help='Este é um input para selecionar a data que queremos buscar os equipamentos liberados. As datas disponíveis de exemplo são apenas do dia 01/07/2024 até 14/07/2024, sendo que os finais de semana não possuem lista, mas podem ser selecionados.')
